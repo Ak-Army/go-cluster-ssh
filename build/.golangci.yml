@@ -1,0 +1,133 @@
+linters:
+  disable-all: true
+  enable:
+    #- bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - exhaustive
+    #- funlen
+    - goconst
+    - gocritic
+    #- gocyclo
+    - gocognit
+    - gofmt
+    - goimports
+    #- golint
+    - revive
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - nakedret
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    #- scopelint
+    - exportloopref
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - whitespace
+linters-settings:
+  gofmt:
+    simplify: true
+  gocognit:
+    min-complexity: 18
+  goconst:
+    min-len: 3
+    min-occurrences: 4
+  lll:
+    line-length: 150
+    tab-width: 4
+  govet:
+    check-shadowing: true
+  revive:
+    rules:
+      - name: unexported-return
+        Disabled: true
+  gosec:
+    excludes:
+      - G306
+  gocritic:
+    disabled-checks:
+      - paramTypeCombine
+      - emptyStringTest
+      - ifElseChain
+      - commentFormatting
+      - unnamedResult
+      - hugeParam
+      - whyNoLint
+    enabled-tags:
+      - performance
+      - diagnostic
+      - style
+  stylecheck:
+    # https://staticcheck.io/docs/options#initialisms
+    initialisms: [ "Id", "ACL", "API", "ASCII", "CPU", "CSS", "DNS", "EOF", "GUID", "HTML", "HTTP", "HTTPS", "IP", "JSON", "QPS", "RAM", "RPC", "SLA", "SMTP", "SQL", "SSH", "TCP", "TLS", "TTL", "UDP", "UI", "GID", "UId", "UUID", "URI", "URL", "UTF8", "VM", "XML", "XMPP", "XSRF", "XSS" ]
+run:
+  skip-dirs:
+    - api
+    - build
+    - config
+    - testdata
+    - vendor
+  # include test files or not, default is true
+  tests: true
+  timeout: 2m
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - lll
+        - goconst
+        - govet
+    - linters:
+        - lll
+      source: "^//go:generate "
+    - linters:
+        - errcheck
+      text: "(?i)Error return value of `.*` is not checked"
+    - linters:
+        - govet
+      text: 'shadow: declaration of "err" shadows declaration at line'
+    - linters:
+        - golint
+      text: "don't use an underscore in package name"
+    - linters:
+        - golint
+      text: "should have a package comment, unless it's in another file for this package"
+    - linters:
+        - stylecheck
+      text: "at least one file in a package should have a package comment"
+    - linters:
+        - gocritic
+      text: "sloppyLen: len(.*) <= 0 can be len(.*) == 0"
+    - linters:
+        - stylecheck
+      text: "ST1003: should not use underscores in package names"
+    - linters:
+        - exhaustive
+      text: "missing cases in switch of type"
+    - linters:
+        - govet
+      text: "unusedresult: result of .* call not used"
+    - linters:
+        - unparam
+      text: "- result 0 (.*) is never used"
+    - linters:
+        - gocritic
+      text: "commentedOutCode: may want to remove commented-out code"
