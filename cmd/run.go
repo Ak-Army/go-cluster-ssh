@@ -37,10 +37,12 @@ func (c *run) Synopsis() string {
 }
 
 func (c *run) Parse(args []string) error {
-	c.hosts = append(c.hosts, &internal.HostGroup{
-		Name:  "Default",
-		Hosts: args,
-	})
+	if len(args) > 0 {
+		c.hosts = append(c.hosts, &internal.HostGroup{
+			Name:  "Default",
+			Hosts: args,
+		})
+	}
 	return nil
 }
 

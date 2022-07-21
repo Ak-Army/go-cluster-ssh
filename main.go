@@ -7,6 +7,7 @@ import (
 	"os"
 
 	_ "github.com/Ak-Army/go-cluster-ssh/cmd"
+	"github.com/Ak-Army/go-cluster-ssh/internal"
 
 	"github.com/Ak-Army/cli"
 	"github.com/Ak-Army/xlog"
@@ -19,12 +20,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}*/
-	l.SetField("version", Version)
+	l.SetField("version", internal.Version)
 	l.SetField("pid", fmt.Sprintf("%d", os.Getpid()))
 	l.Info("start...")
 	ctx := xlog.NewContext(context.Background(), l)
 
-	c := cli.New("go-cluster-ssh", Version)
+	c := cli.New("go-cluster-ssh", internal.Version)
 	cli.RootCommand().Authors = []string{"Ak-Army"}
 	c.SetDefault("run")
 	c.Run(ctx, os.Args)

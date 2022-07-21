@@ -1,4 +1,4 @@
-package main
+package internal
 
 // Version got from builder
 var Version string

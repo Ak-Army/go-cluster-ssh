@@ -22,6 +22,7 @@ type HostGroup struct {
 
 	terminals []*Terminal
 }
+
 type AllTerminal struct {
 	terminals []*Terminals
 	sshCmd    string
@@ -37,11 +38,13 @@ func (t *AllTerminal) Len() int {
 	}
 	return l
 }
+
 func (t *AllTerminal) Reflow(width int, force bool, c Config) {
 	for _, term := range t.terminals {
 		term.Reflow(width, force, c)
 	}
 }
+
 func (t *AllTerminal) Each(f func(t *Terminal)) {
 	for _, term := range t.terminals {
 		term.Each(f)

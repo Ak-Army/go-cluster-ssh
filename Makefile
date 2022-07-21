@@ -1,5 +1,12 @@
 GOLANGCI_LINT_VERSION ?= v1.42.0
 GOPATH ?= $(shell ${GO_EXECUTABLE} env GOPATH)
+PACKAGE_NAME ?= $(shell go mod edit -json | grep 'Path' | head -1 | sed -re 's/.*: "([^"]+)"/\1/')
+
+BUILD_VERSION ?= $(shell git describe --tags)
+BUILD_TIME = $(shell date +%FT%T%z)
+
+LD_FLAGS = "-X "${PACKAGE_NAME}/internal".Version=${BUILD_VERSION} \
+	-X "${PACKAGE_NAME}/internal".BuildTime=${BUILD_TIME}"
 
 GOLANGCI_LINT := $(GOPATH)/bin/golangci-lint
 check_lint_version:
@@ -19,5 +26,10 @@ lint: $(GOLANGCI_LINT) check_lint_version
 .PHONY: lint
 
 build:
-	go build -tags "gtk_3_22,pango_1_42" -o _build/go-cluster-ssh .
+	go build \
+		-v \
+		-tags "gtk_3_22,pango_1_42" \
+		-o _build/go-cluster-ssh \
+		-ldflags=${LD_FLAGS} \
+		.
 .PHONY: build
