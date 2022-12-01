@@ -28,8 +28,30 @@ lint: $(GOLANGCI_LINT) check_lint_version
 build:
 	go build \
 		-v \
-		-tags "gtk_3_22,pango_1_42" \
 		-o _build/go-cluster-ssh \
 		-ldflags=${LD_FLAGS} \
 		.
 .PHONY: build
+
+#: Build docker builder image
+docker-builder-image:
+	docker image build \
+		--network host \
+		-t go-cluster-ssh:dev \
+		.
+.PHONY: docker-builder-image
+
+docker-build: docker-builder-image
+	docker run \
+ 	--rm --network host \
+	--user $$(id -u):$$(id -g) \
+	-v /etc/group:/etc/group:ro \
+	-v /etc/passwd:/etc/passwd:ro \
+	-v /etc/shadow:/etc/shadow:ro \
+	-v ${HOME}/.cache:${HOME}/.cache \
+	-v $(shell pwd):/build \
+	-v ${GOPATH}:/go \
+	-e HOME=${HOME} \
+	go-cluster-ssh:dev \
+	make build
+.PHONY: docker-build

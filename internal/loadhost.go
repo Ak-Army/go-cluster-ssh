@@ -5,22 +5,20 @@ import (
 	"os"
 
 	"github.com/Ak-Army/xlog"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/diamondburned/gotk4/pkg/gtk/v3"
 )
 
-func LoadHostsDialog(ts *AllTerminal, w *gtk.Window) {
-	entryBox, _ := gtk.FileChooserDialogNewWith2Buttons("Save host to:", w, gtk.FILE_CHOOSER_ACTION_OPEN, "Load", gtk.RESPONSE_OK, "Cancel", gtk.RESPONSE_CANCEL)
-	entryBox.SetProperty("has_focus", true)
+func LoadHostsDialog(b *gtk.Builder, ts *AllTerminal) {
+	windowLoadHost := b.GetObject("windowLoadHost").Cast().(*gtk.FileChooserDialog)
 
-	defer entryBox.Destroy()
-	resp := entryBox.Run()
-	if resp == gtk.RESPONSE_CANCEL {
-		entryBox.Destroy()
+	defer windowLoadHost.Hide()
+	resp := windowLoadHost.Run()
+	if resp == int(gtk.ResponseCancel) {
 		return
 	}
-	xlog.Debug("Load from: ", entryBox.GetFilename())
+	xlog.Debug("Load from: ", windowLoadHost.Filename())
 	// hostnames are assumed to be whitespace separated
-	file, err := os.Open(entryBox.GetFilename())
+	file, err := os.Open(windowLoadHost.Filename())
 	if err != nil {
 		xlog.Error("Unable to load hosts from file", err)
 		return
@@ -31,7 +29,7 @@ func LoadHostsDialog(ts *AllTerminal, w *gtk.Window) {
 	scanner.Split(bufio.ScanWords)
 	// optionally, resize scanner's capacity for lines over 64K, see next example
 	for scanner.Scan() {
-		ts.AddHost(entryBox.GetFilename(), scanner.Text())
+		ts.AddHost(windowLoadHost.Filename(), scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
 		xlog.Error("Error occured when hosts load from file", err)

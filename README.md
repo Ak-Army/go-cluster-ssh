@@ -60,6 +60,6 @@ To see current issues, report problems, and see plans for features,
 see the [go-cluster-ssh GitHub issues page](https://github.com/Ak-Army/go-cluster-ssh/issues).
 
 ## Build dependency
-sudo apt install libgtk-3-dev libcairo2-dev libglib2.0-dev libvte-2.91-dev
+sudo apt install libgtk-3-dev libcairo2-dev libglib2.0-dev libvte-2.91-dev libgirepository1.0-dev
 
 

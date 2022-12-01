@@ -6,23 +6,21 @@ import (
 	"strings"
 
 	"github.com/Ak-Army/xlog"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/diamondburned/gotk4/pkg/gtk/v3"
 )
 
-func SaveHostsDialog(ts *AllTerminal, w *gtk.Window) {
-	entryBox, _ := gtk.FileChooserDialogNewWith2Buttons("Save host to:", w, gtk.FILE_CHOOSER_ACTION_SAVE, "Save", gtk.RESPONSE_OK, "Cancel", gtk.RESPONSE_CANCEL)
-	entryBox.SetCreateFolders(true)
-	entryBox.SetProperty("has_focus", true)
+func SaveHostsDialog(b *gtk.Builder, ts *AllTerminal) {
+	windowSaveHost := b.GetObject("windowSaveHost").Cast().(*gtk.FileChooserDialog)
 
-	resp := entryBox.Run()
-	if resp == gtk.RESPONSE_CANCEL {
-		entryBox.Destroy()
+	resp := windowSaveHost.Run()
+	if resp == int(gtk.ResponseCancel) {
+		windowSaveHost.Hide()
 		return
 	}
-	xlog.Debug("Save to: ", entryBox.GetFilename())
-	err := ioutil.WriteFile(entryBox.GetFilename(), []byte(strings.Join(ts.Names(), " ")), fs.ModePerm)
+	xlog.Debug("Save to: ", windowSaveHost.Filename())
+	err := ioutil.WriteFile(windowSaveHost.Filename(), []byte(strings.Join(ts.Names(), " ")), fs.ModePerm)
 	if err != nil {
 		xlog.Error("Unable to save hosts to file", err)
 	}
-	entryBox.Destroy()
+	windowSaveHost.Hide()
 }
