@@ -28,6 +28,7 @@ lint: $(GOLANGCI_LINT) check_lint_version
 build:
 	go build \
 		-v \
+		-tags "gtk_3_22,pango_1_42" \
 		-o _build/go-cluster-ssh \
 		-ldflags=${LD_FLAGS} \
 		.

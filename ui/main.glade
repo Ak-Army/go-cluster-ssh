@@ -43,7 +43,7 @@
                 <property name="can_focus">False</property>
                 <property name="left_padding">12</property>
                 <child>
-                  <object class="GtkCheckButton" id="windowConfigMaximized">
+                  <object class="GtkCheckButton" id="windowConfig.Maximized">
                     <property name="label" translatable="yes">Start maximized</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
@@ -85,7 +85,7 @@
                     <property name="can_focus">False</property>
                     <property name="row_spacing">10</property>
                     <child>
-                      <object class="GtkFontButton" id="windowConfigFont">
+                      <object class="GtkFontButton" id="windowConfig.Font">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -133,7 +133,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkSpinButton" id="windowConfigMinWidth">
+                      <object class="GtkSpinButton" id="windowConfig.MinWidth">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="width_chars">4</property>
@@ -152,7 +152,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkSpinButton" id="windowConfigMinHeight">
+                      <object class="GtkSpinButton" id="windowConfig.MinHeight">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="width_chars">4</property>
@@ -195,12 +195,11 @@
             <property name="can_focus">False</property>
             <property name="layout_style">center</property>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="windowConfig.Save">
                 <property name="label" translatable="yes">Save</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="windowConfig.Save" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -209,12 +208,11 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="windowConfig.Close">
                 <property name="label" translatable="yes">Close</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="windowConfig.Close" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -258,11 +256,10 @@
           </packing>
         </child>
         <child>
-          <object class="GtkEntry" id="windowAddHostEntry">
+          <object class="GtkEntry" id="windowAddHost.Entry">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="has_focus">True</property>
-            <signal name="key-press-event" handler="windowAddHost.Entry.KeyPress" swapped="no"/>
           </object>
           <packing>
             <property name="expand">True</property>
@@ -271,12 +268,11 @@
           </packing>
         </child>
         <child>
-          <object class="GtkButton" id="add_new_host_add">
+          <object class="GtkButton" id="windowAddHost.Add">
             <property name="label" translatable="yes">Add</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
-            <signal name="clicked" handler="windowAddHost.Add" swapped="no"/>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -285,12 +281,11 @@
           </packing>
         </child>
         <child>
-          <object class="GtkButton" id="add_new_host_close">
+          <object class="GtkButton" id="windowAddHost.Close">
             <property name="label" translatable="yes">Close</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
-            <signal name="clicked" handler="windowAddHost.Close" swapped="no"/>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -390,30 +385,27 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkMenuItem" id="addHost">
+                      <object class="GtkMenuItem" id="menu.AddHost">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Add host</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="menu.AddHost" swapped="no"/>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="saveHost">
+                      <object class="GtkMenuItem" id="menu.SaveHost">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Save hosts</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="menu.SaveHost" swapped="no"/>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="loadHost">
+                      <object class="GtkMenuItem" id="menu.LoadHost">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Load host</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="menu.LoadHost" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -423,12 +415,11 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="quit">
+                      <object class="GtkMenuItem" id="menu.Quit">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Quit</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="menu.Quit" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -446,30 +437,27 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkMenuItem" id="activeHost">
+                      <object class="GtkMenuItem" id="menu.ActiveHost">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Active host</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="menu.ActiveHost" swapped="no"/>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="removeClosed">
+                      <object class="GtkMenuItem" id="menu.RemoveClosed">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Remove closed</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="menu.RemoveClosed" swapped="no"/>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="preferences">
+                      <object class="GtkMenuItem" id="menu.Preferences">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Preferences</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="menu.Preferences" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -487,21 +475,19 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkMenuItem" id="ascend">
+                      <object class="GtkMenuItem" id="menu.Ascend">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Ascend</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="menu.Ascend" swapped="no"/>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="descend">
+                      <object class="GtkMenuItem" id="menu.Descend">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Descend</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="menu.Descend" swapped="no"/>
                       </object>
                     </child>
                   </object>

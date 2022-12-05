@@ -2,15 +2,16 @@ package internal
 
 import (
 	"math"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"unsafe"
 
 	"github.com/Ak-Army/xlog"
-	"github.com/diamondburned/gotk4/pkg/core/glib"
-	"github.com/diamondburned/gotk4/pkg/gdk/v3"
-	"github.com/diamondburned/gotk4/pkg/gtk/v3"
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/glib"
+	"github.com/gotk3/gotk3/gtk"
 	"github.com/sqp/vte"
 	"go.uber.org/atomic"
 )
@@ -26,7 +27,7 @@ type AllTerminal struct {
 	terminals []*Terminals
 	sshCmd    string
 	sshArgs   []string
-	reflow    func(t gtk.Widgetter)
+	reflow    func(t gtk.IWidget)
 	mainBox   *gtk.Box
 }
 
@@ -58,21 +59,21 @@ func (t *AllTerminal) Names() []string {
 	return names
 }
 
-func (t *AllTerminal) Layout() gtk.Widgetter {
+func (t *AllTerminal) Layout() gtk.IWidget {
 	if t.mainBox != nil {
 		t.mainBox.Destroy()
 	}
-	t.mainBox = gtk.NewBox(gtk.OrientationVertical, 0)
-	t.mainBox.SetObjectProperty("border_width", 0)
+	t.mainBox, _ = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	t.mainBox.SetProperty("border_width", 0)
 
 	l := len(t.terminals)
 	xlog.Debug("terminals:", l)
 	for _, term := range t.terminals {
 		xlog.Debug("Add terminals ", term.Name)
 		if l > 1 {
-			header := gtk.NewHeaderBar()
+			header, _ := gtk.HeaderBarNew()
 			header.SetTitle(term.Name)
-			theme := gtk.IconThemeGetDefault()
+			theme, _ := gtk.IconThemeGetDefault()
 			t.addButtons(theme, header, term)
 			t.mainBox.PackStart(header, false, false, 0)
 		}
@@ -84,19 +85,19 @@ func (t *AllTerminal) Layout() gtk.Widgetter {
 }
 
 func (t *AllTerminal) addButtons(theme *gtk.IconTheme, header *gtk.HeaderBar, term *Terminals) {
-	upButton := gtk.NewButton()
+	upButton, _ := gtk.ButtonNew()
 	var upImage *gtk.Image
 	var downImage *gtk.Image
 	if theme.HasIcon("go-up") {
-		icon, _ := theme.LoadIcon("go-up", int(gtk.IconSizeButton), gtk.IconLookupUseBuiltin)
+		icon, _ := theme.LoadIcon("go-up", int(gtk.ICON_SIZE_BUTTON), gtk.ICON_LOOKUP_USE_BUILTIN)
 		if icon != nil {
-			upImage = gtk.NewImageFromPixbuf(icon)
+			upImage, _ = gtk.ImageNewFromPixbuf(icon)
 		}
 	}
 	if theme.HasIcon("go-down") {
-		icon, _ := theme.LoadIcon("go-down", int(gtk.IconSizeButton), gtk.IconLookupUseBuiltin)
+		icon, _ := theme.LoadIcon("go-down", int(gtk.ICON_SIZE_BUTTON), gtk.ICON_LOOKUP_USE_BUILTIN)
 		if icon != nil {
-			downImage = gtk.NewImageFromPixbuf(icon)
+			downImage, _ = gtk.ImageNewFromPixbuf(icon)
 		}
 	}
 	if term.IsHidden() {
@@ -104,7 +105,7 @@ func (t *AllTerminal) addButtons(theme *gtk.IconTheme, header *gtk.HeaderBar, te
 	} else {
 		upButton.Add(upImage)
 	}
-	upButton.Connect("clicked", func(_ interface{}) {
+	upButton.Connect("clicked", func(_ *gtk.Button) {
 		xlog.Info("Hide: ", term.IsHidden())
 		if term.IsHidden() {
 			term.Show()
@@ -115,15 +116,15 @@ func (t *AllTerminal) addButtons(theme *gtk.IconTheme, header *gtk.HeaderBar, te
 	})
 	header.PackEnd(upButton)
 
-	closeButton := gtk.NewButton()
+	closeButton, _ := gtk.ButtonNew()
 	if theme.HasIcon("window-close") {
-		icon, _ := theme.LoadIcon("window-close", int(gtk.IconSizeButton), gtk.IconLookupUseBuiltin)
+		icon, _ := theme.LoadIcon("window-close", int(gtk.ICON_SIZE_BUTTON), gtk.ICON_LOOKUP_USE_BUILTIN)
 		if icon != nil {
-			closeImage := gtk.NewImageFromPixbuf(icon)
+			closeImage, _ := gtk.ImageNewFromPixbuf(icon)
 			closeButton.Add(closeImage)
 		}
 	}
-	closeButton.Connect("clicked", func(_ interface{}) {
+	closeButton.Connect("clicked", func(_ *gtk.Button) {
 		t.RemoveGroup(term.Name)
 	})
 	header.PackEnd(closeButton)
@@ -190,7 +191,7 @@ func (t *AllTerminal) RemoveGroup(name string) {
 	t.reflow(t.mainBox)
 }
 
-func NewAllTerminals(sshCmd string, sshArgs []string, group []*HostGroup, reflow func(t gtk.Widgetter)) *AllTerminal {
+func NewAllTerminals(sshCmd string, sshArgs []string, group []*HostGroup, reflow func(t gtk.IWidget)) *AllTerminal {
 	t := &AllTerminal{
 		sshCmd:  sshCmd,
 		sshArgs: sshArgs,
@@ -245,7 +246,7 @@ func NewTerminals(sshCmd string, sshArgs []string, name string) *Terminals {
 		sshArgs: sshArgs,
 		Name:    name,
 	}
-	t.layoutTable = gtk.NewGrid()
+	t.layoutTable, _ = gtk.GridNew()
 	t.layoutTable.SetRowHomogeneous(true)
 	t.layoutTable.SetColumnHomogeneous(true)
 	t.layoutTable.SetRowSpacing(1)
@@ -259,7 +260,11 @@ func newTerminal(host string) *Terminal {
 	if t == nil {
 		return nil
 	}
-	obj := glib.Take(unsafe.Pointer(t.Native()))
+	obj := &glib.Object{
+		GObject: glib.ToGObject(unsafe.Pointer(t.Native())),
+	}
+	obj.RefSink()
+	runtime.SetFinalizer(obj, (*glib.Object).Unref)
 
 	return &Terminal{
 		Widget: &gtk.Widget{
@@ -274,7 +279,7 @@ func newTerminal(host string) *Terminal {
 
 func (t *Terminals) Reflow(width int, force bool, c Config) {
 	numTerms := t.Len()
-	cs := t.layoutTable.ObjectProperty("column_spacing")
+	cs, _ := t.layoutTable.GetProperty("column_spacing")
 
 	t.Cols = math.Floor(float64((width - cs.(int)) / c.MinWidth))
 	if t.Cols < 1 || numTerms == 1 {
@@ -289,8 +294,8 @@ func (t *Terminals) Reflow(width int, force bool, c Config) {
 	// ensure we evenly distribute terminals per row.
 	t.Cols = math.Ceil(float64(numTerms) / t.Rows)
 	xlog.Debugf("Reflow width %s %d => cols: %.0f, rows: %.0f numTerms: %d", t.Name, width, t.Cols, t.Rows, numTerms)
-	nc := t.layoutTable.ObjectProperty("n_columns")
-	nr := t.layoutTable.ObjectProperty("n_rows")
+	nc, _ := t.layoutTable.GetProperty("n_columns")
+	nr, _ := t.layoutTable.GetProperty("n_rows")
 	if nc != t.Rows || nr != t.Rows || force {
 		t.ReflowTable(&reflowConfig{
 			Cols:        int(t.Cols),
@@ -354,13 +359,13 @@ func (t *Terminals) AddHost(host string) {
 	term.CopyInput = true
 	// attach copy/paste handler
 	term.Connect("key_press_event", func(_ interface{}, ev *gdk.Event) {
-		keyEvent := ev.AsKey()
+		keyEvent := &gdk.EventKey{Event: ev}
 		// check for paste key shortcut (ctl-shift-v/c)
-		if keyEvent.Type() == gdk.KeyPressType &&
-			keyEvent.State()&gdk.ControlMask == gdk.ControlMask &&
-			keyEvent.State()&gdk.ShiftMask == gdk.ShiftMask {
+		if keyEvent.Type() == gdk.EVENT_KEY_PRESS &&
+			keyEvent.State()&uint(gdk.CONTROL_MASK) == uint(gdk.CONTROL_MASK) &&
+			keyEvent.State()&uint(gdk.SHIFT_MASK) == uint(gdk.SHIFT_MASK) {
 
-			switch keyEvent.Keyval() {
+			switch keyEvent.KeyVal() {
 			case gdk.KEY_V:
 				term.PasteClipboard()
 			case gdk.KEY_C:

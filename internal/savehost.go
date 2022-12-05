@@ -6,19 +6,20 @@ import (
 	"strings"
 
 	"github.com/Ak-Army/xlog"
-	"github.com/diamondburned/gotk4/pkg/gtk/v3"
+	"github.com/gotk3/gotk3/gtk"
 )
 
 func SaveHostsDialog(b *gtk.Builder, ts *AllTerminal) {
-	windowSaveHost := b.GetObject("windowSaveHost").Cast().(*gtk.FileChooserDialog)
+	w, _ := b.GetObject("windowSaveHost")
+	windowSaveHost := w.(*gtk.FileChooserDialog)
 
 	resp := windowSaveHost.Run()
-	if resp == int(gtk.ResponseCancel) {
+	if resp == gtk.RESPONSE_CANCEL {
 		windowSaveHost.Hide()
 		return
 	}
-	xlog.Debug("Save to: ", windowSaveHost.Filename())
-	err := ioutil.WriteFile(windowSaveHost.Filename(), []byte(strings.Join(ts.Names(), " ")), fs.ModePerm)
+	xlog.Debug("Save to: ", windowSaveHost.GetFilename())
+	err := ioutil.WriteFile(windowSaveHost.GetFilename(), []byte(strings.Join(ts.Names(), " ")), fs.ModePerm)
 	if err != nil {
 		xlog.Error("Unable to save hosts to file", err)
 	}

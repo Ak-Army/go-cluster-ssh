@@ -1,36 +1,41 @@
 package internal
 
 import (
+	"log"
+
 	"github.com/Ak-Army/xlog"
-	"github.com/diamondburned/gotk4/pkg/gtk/v3"
+	"github.com/gotk3/gotk3/gtk"
 )
 
 func ActiveHostsDialog(ts *AllTerminal) {
-	mainWindow := gtk.NewWindow(gtk.WindowToplevel)
+	mainWindow, err := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
+	if err != nil {
+		log.Fatal("Unable to create window:", err)
+	}
 	mainWindow.SetModal(true)
 
-	mainBox := gtk.NewBox(gtk.OrientationVertical, 5)
-	mainBox.SetObjectProperty("border_width", 5)
+	mainBox, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
+	mainBox.SetProperty("border_width", 5)
 
 	for _, term := range ts.terminals {
-		hostsConfFrame := gtk.NewAspectFrame(term.Name, 0, 0, 1, true)
-		hostsConfTable := gtk.NewGrid()
-		hostsConfTable.SetObjectProperty("border_width", 5)
-		hostsConfTable.SetObjectProperty("row_spacing", 5)
-		hostsConfTable.SetObjectProperty("column_spacing", 5)
+		hostsConfFrame, _ := gtk.AspectFrameNew(term.Name, 0, 0, 1, true)
+		hostsConfTable, _ := gtk.GridNew()
+		hostsConfTable.SetBorderWidth(5)
+		hostsConfTable.SetRowSpacing(5)
+		hostsConfTable.SetColumnSpacing(5)
 		col := 1
 		row := 1
 		for _, t := range term.terminals {
 			host := t.Host
-			hostTable := gtk.NewGrid()
-			hostTable.SetObjectProperty("column_spacing", 2)
-			label := gtk.NewLabel(host)
+			hostTable, _ := gtk.GridNew()
+			hostTable.SetColumnSpacing(2)
+			label, _ := gtk.LabelNew(host)
 			hostTable.Attach(label, 1, 1, 1, 1)
-			hostCheckbox := gtk.NewCheckButton()
+			hostCheckbox, _ := gtk.CheckButtonNew()
 			hostCheckbox.SetActive(t.CopyInput)
 			hostCheckbox.Connect("toggled", func(button *gtk.CheckButton) {
-				xlog.Debugf("set %s host to active %t", t, button.Activate())
-				ts.Activate(host, button.Activate())
+				xlog.Debugf("set %s host to active %t", t, button.GetActive())
+				ts.Activate(host, button.GetActive())
 			})
 			hostTable.Attach(hostCheckbox, 2, 1, 1, 1)
 			hostsConfTable.Attach(hostTable, col, row, 1, 1)
@@ -44,7 +49,7 @@ func ActiveHostsDialog(ts *AllTerminal) {
 		mainBox.PackStart(hostsConfFrame, true, false, 0)
 	}
 
-	okButton := gtk.NewButtonWithLabel("Ok")
+	okButton, _ := gtk.ButtonNewWithLabel("Ok")
 	mainBox.PackStart(okButton, false, false, 0)
 
 	// wire up behaviour

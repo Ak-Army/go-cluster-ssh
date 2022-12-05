@@ -1,8 +1,7 @@
 package internal
 
 import (
-	"github.com/Ak-Army/xlog"
-	"github.com/diamondburned/gotk4/pkg/gtk/v3"
+	"github.com/gotk3/gotk3/gtk"
 )
 
 type Config struct {
@@ -33,16 +32,21 @@ func NewConfigDialog(b *gtk.Builder, config Config, saveFunc func(Config)) {
 		configWindow.mainWindow.ShowAll()
 		return
 	}
+	sm, _ := b.GetObject("windowConfig.Maximized")
+	f, _ := b.GetObject("windowConfig.Font")
+	mw, _ := b.GetObject("windowConfig.MinWidth")
+	mh, _ := b.GetObject("windowConfig.MinHeight")
+	w, _ := b.GetObject("windowConfig")
 	configWindow = &ConfigDialog{
 		saveFunc: saveFunc,
 		config:   config,
 		element: &element{
-			StartMaximized: b.GetObject("windowConfigMaximized").Cast().(*gtk.CheckButton),
-			Font:           b.GetObject("windowConfigFont").Cast().(*gtk.FontButton),
-			MinWidth:       b.GetObject("windowConfigMinWidth").Cast().(*gtk.SpinButton),
-			MinHeight:      b.GetObject("windowConfigMinHeight").Cast().(*gtk.SpinButton),
+			StartMaximized: sm.(*gtk.CheckButton),
+			Font:           f.(*gtk.FontButton),
+			MinWidth:       mw.(*gtk.SpinButton),
+			MinHeight:      mh.(*gtk.SpinButton),
 		},
-		mainWindow: b.GetObject("windowConfig").Cast().(*gtk.Window),
+		mainWindow: w.(*gtk.Window),
 	}
 	configWindow.signals(b)
 
@@ -50,10 +54,11 @@ func NewConfigDialog(b *gtk.Builder, config Config, saveFunc func(Config)) {
 }
 
 func (c *ConfigDialog) signals(b *gtk.Builder) {
-	xlog.Info("add signals")
-	configWindow.mainWindow.Connect("windowConfig.Show", c.show)
-	configWindow.mainWindow.Connect("windowConfig.Hide", c.mainWindow.Hide)
-	configWindow.mainWindow.Connect("windowConfig.Save", c.save)
+	c.mainWindow.Connect("show", c.show)
+	close, _ := b.GetObject("windowConfig.Close")
+	s, _ := b.GetObject("windowConfig.Save")
+	close.(*gtk.Button).Connect("clicked", c.mainWindow.Hide)
+	s.(*gtk.Button).Connect("clicked", c.save)
 }
 
 func (c *ConfigDialog) show(_ interface{}) {
@@ -67,9 +72,9 @@ func (c *ConfigDialog) show(_ interface{}) {
 func (c *ConfigDialog) save(_ interface{}) {
 	c.config.StartMaximized = c.element.StartMaximized.Activate()
 
-	c.config.Font = c.element.Font.Font()
-	c.config.MinWidth = int(c.element.MinWidth.Value())
-	c.config.MinHeight = int(c.element.MinHeight.Value())
+	c.config.Font = c.element.Font.GetFont()
+	c.config.MinWidth = int(c.element.MinWidth.GetValue())
+	c.config.MinHeight = int(c.element.MinHeight.GetValue())
 
 	c.mainWindow.Hide()
 	if c.saveFunc != nil {

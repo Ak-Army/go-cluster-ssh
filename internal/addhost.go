@@ -1,9 +1,10 @@
 package internal
 
 import (
-	"github.com/Ak-Army/xlog"
-	"github.com/diamondburned/gotk4/pkg/gdk/v3"
-	"github.com/diamondburned/gotk4/pkg/gtk/v3"
+	"fmt"
+
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/gtk"
 )
 
 type addHostWindow struct {
@@ -20,46 +21,42 @@ func AddHostDialog(b *gtk.Builder, saveFunc func(string)) {
 		addHost.mainWindow.ShowAll()
 		return
 	}
+	mv, _ := b.GetObject("windowAddHost")
+	eb, _ := b.GetObject("windowAddHost.Entry")
 	addHost = &addHostWindow{
 		saveFunc:   saveFunc,
-		mainWindow: b.GetObject("windowAddHost").Cast().(*gtk.Window),
-		entryBox:   b.GetObject("windowAddHostEntry").Cast().(*gtk.Entry),
+		mainWindow: mv.(*gtk.Window),
+		entryBox:   eb.(*gtk.Entry),
 	}
-	addHost.signals(b)
+	addHost.entryBox.Connect("key-press-event", addHost.entryKeyPress)
+	c, _ := b.GetObject("windowAddHost.Close")
+	a, _ := b.GetObject("windowAddHost.Add")
+	c.(*gtk.Button).Connect("clicked", addHost.close)
+	a.(*gtk.Button).Connect("clicked", addHost.add)
 
 	addHost.mainWindow.ShowAll()
 }
 
-func (c *addHostWindow) signals(b *gtk.Builder) {
-	xlog.Info("signals")
-	c.entryBox.Connect("windowAddHost.Entry.KeyPress", c.entryKeyPress)
-	c.mainWindow.Connect("windowAddHost.Close", c.close)
-	c.mainWindow.Connect("windowAddHost.Add", c.add)
-}
-
 func (c *addHostWindow) add(_ interface{}) {
-	xlog.Info("save")
 	if c.entry != "" {
 		c.saveFunc(c.entry)
 	}
 }
 
 func (c *addHostWindow) close(_ interface{}) {
-	xlog.Info("hide")
 	c.entryBox.DeleteText(0, -1)
-	c.entryBox.SetObjectProperty("has_focus", true)
+	c.entryBox.SetProperty("has_focus", true)
 	c.entry = ""
 	c.mainWindow.Hide()
 }
 
 func (c *addHostWindow) entryKeyPress(e *gtk.Entry, ev *gdk.Event) {
-	xlog.Info("entryKeyPress")
-	keyEvent := ev.AsKey()
-	if keyEvent.Type() == gdk.KeyPressType &&
-		keyEvent.HardwareKeycode() == 36 {
+	keyEvent := &gdk.EventKey{Event: ev}
+	if keyEvent.Type() == gdk.EVENT_KEY_PRESS &&
+		keyEvent.HardwareKeyCode() == 36 {
 		c.add(e)
 	} else {
-		b := e.Buffer()
-		c.entry = b.Text()
+		t, _ := e.GetText()
+		c.entry = fmt.Sprintf("%s%c", t, keyEvent.KeyVal())
 	}
 }
