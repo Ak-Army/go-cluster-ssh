@@ -1,6 +1,7 @@
 package internal
 
 import (
+	_ "embed"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -12,6 +13,9 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed ui/main.glade
+var gladeFile string
 
 type SSH struct {
 	terminals *AllTerminal
@@ -36,8 +40,7 @@ func New(hosts []*HostGroup, sshCmd string, sshArgs []string) {
 	if s.builder == nil {
 		xlog.Fatal("Unable to create new GTK builder")
 	}
-	// Загружаем в билдер окно из файла Glade
-	err = s.builder.AddFromFile("ui/main.glade")
+	err = s.builder.AddFromString(gladeFile)
 	if err != nil {
 		xlog.Fatal("Unable to load main.glade", err)
 	}
