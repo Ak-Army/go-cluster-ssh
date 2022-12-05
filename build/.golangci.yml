@@ -2,7 +2,7 @@ linters:
   disable-all: true
   enable:
     #- bodyclose
-    - deadcode
+    #- deadcode
     - depguard
     - dogsled
     - dupl
@@ -30,13 +30,13 @@ linters:
     #- scopelint
     - exportloopref
     - staticcheck
-    - structcheck
+    #- structcheck
     - stylecheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
+    #- varcheck
     - whitespace
 linters-settings:
   gofmt:
@@ -84,6 +84,9 @@ run:
   # include test files or not, default is true
   tests: true
   timeout: 2m
+  build-tags:
+    - gtk_3_22
+    - pango_1_42
 issues:
   exclude-rules:
     - path: _test\.go

@@ -2,16 +2,12 @@ package internal
 
 import (
 	_ "embed"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Ak-Army/xlog"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
-	"gopkg.in/yaml.v3"
 )
 
 //go:embed ui/main.glade
@@ -20,16 +16,13 @@ var gladeFile string
 type SSH struct {
 	terminals *AllTerminal
 
-	configFile    string
-	config        Config
+	config        *ConfigStore
 	scrollWin     *gtk.ScrolledWindow
 	mainWin       *gtk.ApplicationWindow
 	termMinWidth  int
 	termMinHeight int
 	builder       *gtk.Builder
 	entryBox      *gtk.Entry
-
-	signals map[string]interface{}
 }
 
 func New(hosts []*HostGroup, sshCmd string, sshArgs []string) {
@@ -44,25 +37,14 @@ func New(hosts []*HostGroup, sshCmd string, sshArgs []string) {
 	if err != nil {
 		xlog.Fatal("Unable to load main.glade", err)
 	}
-	home, err := os.UserHomeDir()
+	s.config, err = NewConfig()
 	if err != nil {
-		xlog.Warn("Unable to determine home dir", err)
-	} else {
-		s.configFile = filepath.Join(home, ".config", "go-cluster-ssh.yml")
+		xlog.Warn("Unable to init config", err)
 	}
 	if sshCmd == "" {
 		sshCmd = "/usr/bin/ssh"
 	}
-	s.config = Config{
-		StartMaximized: true,
-		Font:           "Ubuntu Mono,monospace Bold 10",
-		MinWidth:       250,
-		MinHeight:      250,
-	}
-	c, err := os.ReadFile(s.configFile)
-	if err == nil {
-		yaml.Unmarshal(c, &s.config)
-	}
+
 	s.termMinWidth = 1
 	s.termMinHeight = 1
 
@@ -78,7 +60,7 @@ func New(hosts []*HostGroup, sshCmd string, sshArgs []string) {
 	s.initGUI()
 	s.createSignals()
 	s.initMainMenuBar()
-	if s.config.StartMaximized {
+	if s.config.Config().StartMaximized {
 		s.mainWin.Maximize()
 	}
 	s.reflow(true)
@@ -104,7 +86,7 @@ func (s *SSH) reflow(force bool) {
 		return
 	}
 	width, _ := s.mainWin.GetSize()
-	s.terminals.Reflow(width, force, s.config)
+	s.terminals.Reflow(width, force, s.config.Config())
 
 	title := "go-cluster-ssh:" + strings.Join(s.terminals.Names(), " ")
 
@@ -113,15 +95,16 @@ func (s *SSH) reflow(force bool) {
 
 func (s *SSH) configTerminals() {
 	s.terminals.Each(func(t *Terminal) {
+		conf := s.config.Config()
 		t.SetScrollbackLines(-1)
-		t.SetSizeRequest(s.config.MinWidth, s.config.MinHeight)
-		t.SetFontFromString(s.config.Font)
-		if s.termMinWidth < s.config.MinWidth {
-			s.termMinWidth = s.config.MinWidth
+		t.SetSizeRequest(conf.MinWidth, conf.MinHeight)
+		t.SetFontFromString(conf.Font)
+		if s.termMinWidth < conf.MinWidth {
+			s.termMinWidth = conf.MinWidth
 		}
 		s.termMinHeight = t.GetAllocatedHeight()
-		if s.termMinHeight < s.config.MinHeight {
-			s.termMinHeight = s.config.MinHeight
+		if s.termMinHeight < conf.MinHeight {
+			s.termMinHeight = conf.MinHeight
 		}
 	})
 }
@@ -142,7 +125,7 @@ func (s *SSH) initEntryBox() {
 	eb, _ := s.builder.GetObject("entry")
 	s.entryBox = eb.(*gtk.Entry)
 	// feed GNOME clipboard to all active terminals
-	feedPaste := func(widget *gtk.Entry, ev *gdk.Event) {
+	feedPaste := func(_ *gtk.Entry, _ *gdk.Event) {
 		s.terminals.PasteClipboard()
 		buffer, _ := s.entryBox.GetBuffer()
 		buffer.DeleteText(0, -1)
@@ -205,24 +188,8 @@ func (s *SSH) initMainMenuBar() {
 			s.reflow(true)
 		},
 		"menu.Preferences": func(_ *gtk.MenuItem) {
-			NewConfigDialog(s.builder, s.config, func(newConf Config) {
-				if s.configFile == "" {
-					return
-				}
-				xlog.Debug("Save config to: ", s.configFile)
-				s.config = newConf
+			NewConfigDialog(s.builder, s.config, func() {
 				s.reflow(true)
-				b, err := yaml.Marshal(s.config)
-				if err != nil {
-					xlog.Error("Unable to marshal config", err)
-					return
-				}
-
-				err = os.WriteFile(s.configFile, b, fs.ModePerm)
-				if err != nil {
-					xlog.Error("Unable to save config", err)
-					return
-				}
 			})
 		},
 		"menu.Ascend": func(_ *gtk.MenuItem) {
@@ -239,7 +206,6 @@ func (s *SSH) initMainMenuBar() {
 		m, _ := s.builder.GetObject(k)
 		m.(*gtk.MenuItem).Connect("activate", fn)
 	}
-
 }
 
 func (s *SSH) createSignals() {
@@ -247,14 +213,15 @@ func (s *SSH) createSignals() {
 		gtk.MainQuit()
 	})
 	s.mainWin.Connect("size-allocate", func(window *gtk.ApplicationWindow) {
+		conf := s.config.Config()
 		w, h := window.GetSize()
 		newWidth := w
 		newHeight := h
-		if w < s.config.MinWidth {
-			newWidth = s.config.MinWidth
+		if w < conf.MinWidth {
+			newWidth = conf.MinWidth
 		}
-		if h < s.config.MinHeight {
-			newHeight = s.config.MinHeight
+		if h < conf.MinHeight {
+			newHeight = conf.MinHeight
 		}
 		if newWidth != w || newHeight != h {
 			window.SetSizeRequest(newWidth, newHeight)

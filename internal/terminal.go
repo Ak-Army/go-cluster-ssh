@@ -19,8 +19,6 @@ import (
 type HostGroup struct {
 	Name  string
 	Hosts []string
-
-	terminals []*Terminal
 }
 
 type AllTerminal struct {
@@ -39,7 +37,7 @@ func (t *AllTerminal) Len() int {
 	return l
 }
 
-func (t *AllTerminal) Reflow(width int, force bool, c Config) {
+func (t *AllTerminal) Reflow(width int, force bool, c *Config) {
 	for _, term := range t.terminals {
 		term.Reflow(width, force, c)
 	}
@@ -277,11 +275,11 @@ func newTerminal(host string) *Terminal {
 	}
 }
 
-func (t *Terminals) Reflow(width int, force bool, c Config) {
+func (t *Terminals) Reflow(width int, force bool, c *Config) {
 	numTerms := t.Len()
 	cs, _ := t.layoutTable.GetProperty("column_spacing")
 
-	t.Cols = math.Floor(float64((width - cs.(int)) / c.MinWidth))
+	t.Cols = float64((width - cs.(int)) / c.MinWidth)
 	if t.Cols < 1 || numTerms == 1 {
 		t.Cols = 1
 	} else if int(t.Cols) > numTerms {
@@ -364,7 +362,6 @@ func (t *Terminals) AddHost(host string) {
 		if keyEvent.Type() == gdk.EVENT_KEY_PRESS &&
 			keyEvent.State()&uint(gdk.CONTROL_MASK) == uint(gdk.CONTROL_MASK) &&
 			keyEvent.State()&uint(gdk.SHIFT_MASK) == uint(gdk.SHIFT_MASK) {
-
 			switch keyEvent.KeyVal() {
 			case gdk.KEY_V:
 				term.PasteClipboard()

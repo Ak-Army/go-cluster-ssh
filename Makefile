@@ -1,4 +1,4 @@
-GOLANGCI_LINT_VERSION ?= v1.42.0
+GOLANGCI_LINT_VERSION ?= v1.50.1
 GOPATH ?= $(shell ${GO_EXECUTABLE} env GOPATH)
 PACKAGE_NAME ?= $(shell go mod edit -json | grep 'Path' | head -1 | sed -re 's/.*: "([^"]+)"/\1/')
 
@@ -22,7 +22,6 @@ lint: $(GOLANGCI_LINT) check_lint_version
 	${GOLANGCI_LINT} run \
 		-c build/.golangci.yml \
 		-v
-	make -s ci_rmvendor
 .PHONY: lint
 
 build:

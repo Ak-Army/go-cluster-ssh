@@ -2,7 +2,7 @@ package internal
 
 import (
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/Ak-Army/xlog"
@@ -19,7 +19,7 @@ func SaveHostsDialog(b *gtk.Builder, ts *AllTerminal) {
 		return
 	}
 	xlog.Debug("Save to: ", windowSaveHost.GetFilename())
-	err := ioutil.WriteFile(windowSaveHost.GetFilename(), []byte(strings.Join(ts.Names(), " ")), fs.ModePerm)
+	err := os.WriteFile(windowSaveHost.GetFilename(), []byte(strings.Join(ts.Names(), " ")), fs.ModePerm)
 	if err != nil {
 		xlog.Error("Unable to save hosts to file", err)
 	}
