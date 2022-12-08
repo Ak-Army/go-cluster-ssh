@@ -4,10 +4,13 @@ import (
 	_ "embed"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/Ak-Army/xlog"
-	"github.com/gotk3/gotk3/gdk"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/electricface/go-gir/g-2.0"
+	"github.com/electricface/go-gir/gdk-3.0"
+	"github.com/electricface/go-gir/gi"
+	"github.com/electricface/go-gir/gtk-3.0"
 )
 
 //go:embed ui/main.glade
@@ -17,23 +20,20 @@ type SSH struct {
 	terminals *AllTerminal
 
 	config        *ConfigStore
-	scrollWin     *gtk.ScrolledWindow
-	mainWin       *gtk.ApplicationWindow
-	termMinWidth  int
-	termMinHeight int
-	builder       *gtk.Builder
-	entryBox      *gtk.Entry
+	scrollWin     gtk.ScrolledWindow
+	mainWin       gtk.ApplicationWindow
+	termMinWidth  int32
+	termMinHeight int32
+	builder       gtk.Builder
+	entryBox      gtk.Entry
 }
 
 func New(hosts []*HostGroup, sshCmd string, sshArgs []string) {
 	s := &SSH{}
-	gtk.Init(nil)
+	gtk.Init(0, 0)
 	var err error
-	s.builder, _ = gtk.BuilderNew()
-	if s.builder == nil {
-		xlog.Fatal("Unable to create new GTK builder")
-	}
-	err = s.builder.AddFromString(gladeFile)
+	s.builder = gtk.NewBuilder()
+	_, err = s.builder.AddFromString(gladeFile, uint64(len(gladeFile)))
 	if err != nil {
 		xlog.Fatal("Unable to load main.glade", err)
 	}
@@ -71,7 +71,7 @@ func New(hosts []*HostGroup, sshCmd string, sshArgs []string) {
 func (s *SSH) reflow(force bool) {
 	// force redraw
 	w, h := s.mainWin.GetSizeRequest()
-	s.mainWin.SetSizeRequest(0, 0)
+	//s.mainWin.SetSizeRequest(0, 0)
 	time.Sleep(time.Millisecond)
 	defer func() {
 		s.mainWin.SetSizeRequest(w, h)
@@ -111,10 +111,8 @@ func (s *SSH) configTerminals() {
 
 func (s *SSH) initGUI() {
 	// GUI Objects
-	mv, _ := s.builder.GetObject("windowMain")
-	t, _ := s.builder.GetObject("terminals")
-	s.mainWin = mv.(*gtk.ApplicationWindow)
-	s.scrollWin = t.(*gtk.ScrolledWindow)
+	s.mainWin = gtk.WrapApplicationWindow(s.builder.GetObject("windowMain").P)
+	s.scrollWin = gtk.WrapScrolledWindow(s.builder.GetObject("terminals").P)
 	s.scrollWin.Add(s.terminals.Layout())
 	//s.scrollWin.SetSizeRequest(s.termMinWidth, s.termMinHeight)
 
@@ -122,43 +120,48 @@ func (s *SSH) initGUI() {
 }
 
 func (s *SSH) initEntryBox() {
-	eb, _ := s.builder.GetObject("entry")
-	s.entryBox = eb.(*gtk.Entry)
+	s.entryBox = gtk.WrapEntry(s.builder.GetObject("entry").P)
 	// feed GNOME clipboard to all active terminals
-	feedPaste := func(_ *gtk.Entry, _ *gdk.Event) {
+	feedPaste := func() {
 		s.terminals.PasteClipboard()
-		buffer, _ := s.entryBox.GetBuffer()
+		buffer := s.entryBox.GetBuffer()
 		buffer.DeleteText(0, -1)
 	}
 	// forward key events to all terminals with copy_input set
-	feedInput := func(widget *gtk.Entry, ev *gdk.Event) bool {
-		buffer, _ := s.entryBox.GetBuffer()
+	feedInput := func(p gi.ParamBox) interface{} {
+		ev := gdk.Event{}
+		ev.P = p.Params[1].(unsafe.Pointer)
+
+		buffer := s.entryBox.GetBuffer()
 		buffer.DeleteText(0, -1)
 
-		keyEvent := &gdk.EventKey{Event: ev}
-		if keyEvent.Type() == gdk.EVENT_KEY_PRESS &&
-			keyEvent.State()&uint(gdk.CONTROL_MASK) == uint(gdk.CONTROL_MASK) &&
-			keyEvent.State()&uint(gdk.SHIFT_MASK) == uint(gdk.SHIFT_MASK) {
-			feedPaste(widget, ev)
+		_, mod := ev.GetState()
+		if ev.GetEventType() == gdk.EventTypeKeyPress &&
+			mod&gdk.ModifierTypeControlMask == gdk.ModifierTypeControlMask &&
+			mod&gdk.ModifierTypeShiftMask == gdk.ModifierTypeShiftMask {
+			feedPaste()
 		} else {
 			s.terminals.Event(ev)
 		}
 		// this stops regular handler from firing, switching focus.
-		return gdk.GDK_EVENT_STOP
+		return gdk.EVENT_STOP
 	}
 	s.entryBox.Connect("key_press_event", feedInput)
 	s.entryBox.Connect("key_release_event", feedInput)
 	s.entryBox.Connect("paste_clipboard", feedPaste)
-	s.entryBox.Connect("button_press_event", func(widget *gtk.Entry, ev *gdk.Event) {
-		if gdk.EventButtonNewFromEvent(ev).Button() == gdk.BUTTON_MIDDLE {
-			feedInput(widget, ev)
+	s.entryBox.Connect("button_press_event", func(p gi.ParamBox) {
+		ev := gdk.Event{}
+		ev.P = p.Params[1].(unsafe.Pointer)
+		_, button := ev.GetButton()
+		if button == gdk.BUTTON_MIDDLE {
+			feedInput(p)
 		}
 	})
 }
 
 func (s *SSH) initMainMenuBar() {
-	for k, fn := range map[string]func(menu *gtk.MenuItem){
-		"menu.AddHost": func(_ *gtk.MenuItem) {
+	for k, fn := range map[string]func(menu gi.ParamBox){
+		"menu.AddHost": func(_ gi.ParamBox) {
 			AddHostDialog(s.builder, func(hostName string) {
 				s.scrollWin.Remove(s.terminals.mainBox)
 				s.terminals.AddHost("Default", hostName)
@@ -167,52 +170,57 @@ func (s *SSH) initMainMenuBar() {
 				s.scrollWin.QueueDraw()
 			})
 		},
-		"menu.SaveHost": func(_ *gtk.MenuItem) {
+		"menu.SaveHost": func(_ gi.ParamBox) {
 			SaveHostsDialog(s.builder, s.terminals)
 		},
-		"menu.LoadHost": func(_ *gtk.MenuItem) {
+		"menu.LoadHost": func(_ gi.ParamBox) {
 			LoadHostsDialog(s.builder, s.terminals)
 			s.scrollWin.Remove(s.terminals.mainBox)
 			s.scrollWin.Add(s.terminals.Layout())
 			s.reflow(true)
 			s.scrollWin.QueueDraw()
 		},
-		"menu.Quit": func(_ *gtk.MenuItem) {
+		"menu.Quit": func(_ gi.ParamBox) {
 			gtk.MainQuit()
 		},
-		"menu.ActiveHost": func(_ *gtk.MenuItem) {
+		"menu.ActiveHost": func(_ gi.ParamBox) {
 			ActiveHostsDialog(s.terminals)
 		},
-		"menu.RemoveClosed": func(_ *gtk.MenuItem) {
+		"menu.RemoveClosed": func(_ gi.ParamBox) {
 			s.terminals.RemoveClosedHost()
 			s.reflow(true)
 		},
-		"menu.Preferences": func(_ *gtk.MenuItem) {
+		"menu.Preferences": func(_ gi.ParamBox) {
 			NewConfigDialog(s.builder, s.config, func() {
 				s.reflow(true)
 			})
 		},
-		"menu.Ascend": func(_ *gtk.MenuItem) {
+		"menu.Ascend": func(_ gi.ParamBox) {
 			s.terminals.OrderAsc()
 			s.reflow(true)
-			s.entryBox.SetProperty("has_focus", true)
+			v, _ := g.NewValue()
+			v.SetBoolean(true)
+			s.entryBox.GrabFocus()
 		},
-		"menu.Descend": func(_ *gtk.MenuItem) {
+		"menu.Descend": func(_ gi.ParamBox) {
 			s.terminals.OrderDesc()
 			s.reflow(true)
-			s.entryBox.SetProperty("has_focus", true)
+			v, _ := g.NewValue()
+			v.SetBoolean(true)
+			s.entryBox.GrabFocus()
 		},
 	} {
-		m, _ := s.builder.GetObject(k)
-		m.(*gtk.MenuItem).Connect("activate", fn)
+		m := gtk.WrapMenuItem(s.builder.GetObject(k).P)
+		m.Connect("activate", fn)
 	}
 }
 
 func (s *SSH) createSignals() {
-	s.mainWin.Connect("delete-event", func(_ interface{}) {
+	s.mainWin.Connect("delete-event", func() {
 		gtk.MainQuit()
 	})
-	s.mainWin.Connect("size-allocate", func(window *gtk.ApplicationWindow) {
+	s.mainWin.Connect("size-allocate", func(p gi.ParamBox) {
+		window := gtk.WrapApplicationWindow(p.Params[0].(g.Object).P)
 		conf := s.config.Config()
 		w, h := window.GetSize()
 		newWidth := w
@@ -223,8 +231,9 @@ func (s *SSH) createSignals() {
 		if h < conf.MinHeight {
 			newHeight = conf.MinHeight
 		}
+		xlog.Info(w, h)
 		if newWidth != w || newHeight != h {
-			window.SetSizeRequest(newWidth, newHeight)
+			s.mainWin.SetSizeRequest(newWidth, newHeight)
 		} else {
 			s.reflow(false)
 		}

@@ -1,45 +1,43 @@
 package internal
 
 import (
-	"log"
-
 	"github.com/Ak-Army/xlog"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/electricface/go-gir/g-2.0"
+	"github.com/electricface/go-gir/gi"
+	"github.com/electricface/go-gir/gtk-3.0"
 )
 
 func ActiveHostsDialog(ts *AllTerminal) {
-	mainWindow, err := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
-	if err != nil {
-		log.Fatal("Unable to create window:", err)
-	}
+	mainWindow := gtk.NewWindow(gtk.WindowTypeToplevel)
 	mainWindow.SetModal(true)
 
-	mainBox, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
-	mainBox.SetProperty("border_width", 5)
+	mainBox := gtk.NewBox(gtk.OrientationVertical, 5)
+	mainBox.SetBorderWidth(5)
 
 	for _, term := range ts.terminals {
-		hostsConfFrame, _ := gtk.AspectFrameNew(term.Name, 0, 0, 1, true)
-		hostsConfTable, _ := gtk.GridNew()
+		hostsConfFrame := gtk.NewAspectFrame(term.Name, 0, 0, 1, true)
+		hostsConfTable := gtk.NewGrid()
 		hostsConfTable.SetBorderWidth(5)
 		hostsConfTable.SetRowSpacing(5)
 		hostsConfTable.SetColumnSpacing(5)
-		col := 1
-		row := 1
+		col := int32(1)
+		row := int32(1)
 		for _, t := range term.terminals {
 			host := t.Host
-			hostTable, _ := gtk.GridNew()
+			hostTable := gtk.NewGrid()
 			hostTable.SetColumnSpacing(2)
-			label, _ := gtk.LabelNew(host)
+			label := gtk.NewLabel(host)
 			hostTable.Attach(label, 1, 1, 1, 1)
-			hostCheckbox, _ := gtk.CheckButtonNew()
+			hostCheckbox := gtk.NewCheckButton()
 			hostCheckbox.SetActive(t.CopyInput)
-			hostCheckbox.Connect("toggled", func(button *gtk.CheckButton) {
+			hostCheckbox.Connect("toggled", func(p gi.ParamBox) {
+				button := gtk.WrapCheckButton(p.Params[0].(g.Object).P)
 				xlog.Debugf("set %s host to active %t", t, button.GetActive())
 				ts.Activate(host, button.GetActive())
 			})
 			hostTable.Attach(hostCheckbox, 2, 1, 1, 1)
 			hostsConfTable.Attach(hostTable, col, row, 1, 1)
-			if col == int(term.Cols) {
+			if col == term.Cols {
 				col = 0
 				row++
 			}
@@ -49,11 +47,11 @@ func ActiveHostsDialog(ts *AllTerminal) {
 		mainBox.PackStart(hostsConfFrame, true, false, 0)
 	}
 
-	okButton, _ := gtk.ButtonNewWithLabel("Ok")
+	okButton := gtk.NewButtonWithLabel("Ok")
 	mainBox.PackStart(okButton, false, false, 0)
 
 	// wire up behaviour
-	okButton.Connect("clicked", func(_ *gtk.Button) { mainWindow.Destroy() })
+	okButton.Connect("clicked", mainWindow.Destroy)
 	mainWindow.Add(mainBox)
 	mainWindow.ShowAll()
 }

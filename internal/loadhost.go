@@ -5,16 +5,15 @@ import (
 	"os"
 
 	"github.com/Ak-Army/xlog"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/electricface/go-gir/gtk-3.0"
 )
 
-func LoadHostsDialog(b *gtk.Builder, ts *AllTerminal) {
-	w, _ := b.GetObject("windowLoadHost")
-	windowLoadHost := w.(*gtk.FileChooserDialog)
+func LoadHostsDialog(b gtk.Builder, ts *AllTerminal) {
+	windowLoadHost := gtk.WrapFileChooserDialog(b.GetObject("windowSaveHost").P)
 
 	defer windowLoadHost.Hide()
 	resp := windowLoadHost.Run()
-	if resp == gtk.RESPONSE_CANCEL {
+	if resp == int32(gtk.ResponseTypeCancel) {
 		return
 	}
 	xlog.Debug("Load from: ", windowLoadHost.GetFilename())

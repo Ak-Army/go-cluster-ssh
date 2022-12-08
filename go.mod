@@ -6,7 +6,7 @@ require (
 	github.com/Ak-Army/cli v1.0.1-0.20220304062609-aca90cbc9328
 	github.com/Ak-Army/config v0.0.0-20210928111453-0f9ac0a9718d
 	github.com/Ak-Army/xlog v1.2.0
-	github.com/gotk3/gotk3 v0.6.1
+	github.com/electricface/go-gir v0.0.0-20220119144140-f2fd0857a7da
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
 	github.com/sgreben/flagvar v1.10.1
 	github.com/sqp/vte v0.0.0-20180413181852-165d184de1eb

@@ -2,61 +2,62 @@ package internal
 
 import (
 	"fmt"
+	"unsafe"
 
-	"github.com/gotk3/gotk3/gdk"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/electricface/go-gir/gdk-3.0"
+	"github.com/electricface/go-gir/gi"
+	"github.com/electricface/go-gir/gtk-3.0"
 )
 
 type addHostWindow struct {
-	mainWindow *gtk.Window
+	mainWindow gtk.Window
 	saveFunc   func(string)
 	entry      string
-	entryBox   *gtk.Entry
+	entryBox   gtk.Entry
 }
 
 var addHost *addHostWindow
 
-func AddHostDialog(b *gtk.Builder, saveFunc func(string)) {
+func AddHostDialog(b gtk.Builder, saveFunc func(string)) {
 	if addHost != nil {
 		addHost.mainWindow.ShowAll()
 		return
 	}
-	mv, _ := b.GetObject("windowAddHost")
-	eb, _ := b.GetObject("windowAddHost.Entry")
+
 	addHost = &addHostWindow{
 		saveFunc:   saveFunc,
-		mainWindow: mv.(*gtk.Window),
-		entryBox:   eb.(*gtk.Entry),
+		mainWindow: gtk.WrapWindow(b.GetObject("windowAddHost").P),
+		entryBox:   gtk.WrapEntry(b.GetObject("windowAddHost.Entry").P),
 	}
 	addHost.entryBox.Connect("key-press-event", addHost.entryKeyPress)
-	c, _ := b.GetObject("windowAddHost.Close")
-	a, _ := b.GetObject("windowAddHost.Add")
-	c.(*gtk.Button).Connect("clicked", addHost.close)
-	a.(*gtk.Button).Connect("clicked", addHost.add)
+	gtk.WrapButton(b.GetObject("windowAddHost.Close").P).Connect("clicked", addHost.close)
+	gtk.WrapButton(b.GetObject("windowAddHost.Add").P).Connect("clicked", addHost.add)
 
 	addHost.mainWindow.ShowAll()
 }
 
-func (c *addHostWindow) add(_ interface{}) {
+func (c *addHostWindow) add() {
 	if c.entry != "" {
 		c.saveFunc(c.entry)
 	}
 }
 
-func (c *addHostWindow) close(_ interface{}) {
+func (c *addHostWindow) close() {
 	c.entryBox.DeleteText(0, -1)
-	c.entryBox.SetProperty("has_focus", true)
+	c.entryBox.GrabFocus()
 	c.entry = ""
 	c.mainWindow.Hide()
 }
 
-func (c *addHostWindow) entryKeyPress(e *gtk.Entry, ev *gdk.Event) {
-	keyEvent := &gdk.EventKey{Event: ev}
-	if keyEvent.Type() == gdk.EVENT_KEY_PRESS &&
-		keyEvent.HardwareKeyCode() == 36 {
-		c.add(e)
+func (c *addHostWindow) entryKeyPress(p gi.ParamBox) {
+	ev := gdk.Event{}
+	ev.P = p.Params[1].(unsafe.Pointer)
+	_, code := ev.GetKeycode()
+	if ev.GetEventType() == gdk.EventTypeKeyPress && code == 36 {
+		c.add()
 	} else {
-		t, _ := e.GetText()
-		c.entry = fmt.Sprintf("%s%c", t, keyEvent.KeyVal())
+		t := c.entryBox.GetText()
+		_, kv := ev.GetKeyval()
+		c.entry = fmt.Sprintf("%s%c", t, kv)
 	}
 }

@@ -15,15 +15,15 @@ import (
 	"github.com/Ak-Army/config/encoder"
 	cyaml "github.com/Ak-Army/config/encoder/yaml"
 	"github.com/Ak-Army/xlog"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/electricface/go-gir/gtk-3.0"
 	"github.com/juju/errors"
 )
 
 type Config struct {
 	StartMaximized bool   `config:"startmaximized"`
 	Font           string `config:"font"`
-	MinWidth       int    `config:"minwidth"`
-	MinHeight      int    `config:"minheight"`
+	MinWidth       int32  `config:"minwidth"`
+	MinHeight      int32  `config:"minheight"`
 }
 
 type ConfigStore struct {
@@ -35,14 +35,14 @@ type ConfigStore struct {
 }
 
 type element struct {
-	StartMaximized *gtk.CheckButton
-	Font           *gtk.FontButton
-	MinWidth       *gtk.SpinButton
-	MinHeight      *gtk.SpinButton
+	StartMaximized gtk.CheckButton
+	Font           gtk.FontButton
+	MinWidth       gtk.SpinButton
+	MinHeight      gtk.SpinButton
 }
 
 type configDialog struct {
-	mainWindow *gtk.Window
+	mainWindow gtk.Window
 	saveFunc   func()
 	config     *ConfigStore
 	element    *element
@@ -72,41 +72,34 @@ func NewConfig() (*ConfigStore, error) {
 	return c, err
 }
 
-func NewConfigDialog(b *gtk.Builder, c *ConfigStore, saveFunc func()) {
+func NewConfigDialog(b gtk.Builder, c *ConfigStore, saveFunc func()) {
 	if configWindow != nil {
 		configWindow.mainWindow.ShowAll()
 		return
 	}
-	sm, _ := b.GetObject("windowConfig.Maximized")
-	f, _ := b.GetObject("windowConfig.Font")
-	mw, _ := b.GetObject("windowConfig.MinWidth")
-	mh, _ := b.GetObject("windowConfig.MinHeight")
-	w, _ := b.GetObject("windowConfig")
 	configWindow = &configDialog{
 		saveFunc: saveFunc,
 		config:   c,
 		element: &element{
-			StartMaximized: sm.(*gtk.CheckButton),
-			Font:           f.(*gtk.FontButton),
-			MinWidth:       mw.(*gtk.SpinButton),
-			MinHeight:      mh.(*gtk.SpinButton),
+			StartMaximized: gtk.WrapCheckButton(b.GetObject("windowConfig.Maximized").P),
+			Font:           gtk.WrapFontButton(b.GetObject("windowConfig.Font").P),
+			MinWidth:       gtk.WrapSpinButton(b.GetObject("windowConfig.MinWidth").P),
+			MinHeight:      gtk.WrapSpinButton(b.GetObject("windowConfig.MinHeight").P),
 		},
-		mainWindow: w.(*gtk.Window),
+		mainWindow: gtk.WrapWindow(b.GetObject("windowConfig").P),
 	}
 	configWindow.signals(b)
 
 	configWindow.mainWindow.ShowAll()
 }
 
-func (c *configDialog) signals(b *gtk.Builder) {
+func (c *configDialog) signals(b gtk.Builder) {
 	c.mainWindow.Connect("show", c.show)
-	wClose, _ := b.GetObject("windowConfig.Close")
-	s, _ := b.GetObject("windowConfig.Save")
-	wClose.(*gtk.Button).Connect("clicked", c.mainWindow.Hide)
-	s.(*gtk.Button).Connect("clicked", c.save)
+	gtk.WrapButton(b.GetObject("windowConfig.Close").P).Connect("clicked", c.mainWindow.Hide)
+	gtk.WrapButton(b.GetObject("windowConfig.Save").P).Connect("clicked", c.save)
 }
 
-func (c *configDialog) show(_ interface{}) {
+func (c *configDialog) show() {
 	c.element.StartMaximized.SetActive(c.config.Config().StartMaximized)
 
 	c.element.Font.SetFont(c.config.Config().Font)
@@ -114,13 +107,13 @@ func (c *configDialog) show(_ interface{}) {
 	c.element.MinHeight.SetValue(float64(c.config.Config().MinHeight))
 }
 
-func (c *configDialog) save(_ interface{}) {
+func (c *configDialog) save() {
 	conf := c.config.NewSnapshot().(*Config)
 	conf.StartMaximized = c.element.StartMaximized.Activate()
 
 	conf.Font = c.element.Font.GetFont()
-	conf.MinWidth = int(c.element.MinWidth.GetValue())
-	conf.MinHeight = int(c.element.MinHeight.GetValue())
+	conf.MinWidth = int32(c.element.MinWidth.GetValue())
+	conf.MinHeight = int32(c.element.MinHeight.GetValue())
 	c.config.SetSnapshot(conf, nil)
 	if c.config.configFile != "" {
 		b, err := c.config.encoder.Encode(conf)

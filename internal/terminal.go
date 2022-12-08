@@ -1,17 +1,18 @@
 package internal
 
+import "C"
 import (
-	"math"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"unsafe"
 
 	"github.com/Ak-Army/xlog"
-	"github.com/gotk3/gotk3/gdk"
-	"github.com/gotk3/gotk3/glib"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/electricface/go-gir/g-2.0"
+	"github.com/electricface/go-gir/gdk-3.0"
+	"github.com/electricface/go-gir/gi"
+	"github.com/electricface/go-gir/gtk-3.0"
+
 	"github.com/sqp/vte"
 	"go.uber.org/atomic"
 )
@@ -26,7 +27,8 @@ type AllTerminal struct {
 	sshCmd    string
 	sshArgs   []string
 	reflow    func(t gtk.IWidget)
-	mainBox   *gtk.Box
+	mainBox   gtk.Box
+	inited    bool
 }
 
 func (t *AllTerminal) Len() int {
@@ -37,7 +39,7 @@ func (t *AllTerminal) Len() int {
 	return l
 }
 
-func (t *AllTerminal) Reflow(width int, force bool, c *Config) {
+func (t *AllTerminal) Reflow(width int32, force bool, c *Config) {
 	for _, term := range t.terminals {
 		term.Reflow(width, force, c)
 	}
@@ -58,20 +60,21 @@ func (t *AllTerminal) Names() []string {
 }
 
 func (t *AllTerminal) Layout() gtk.IWidget {
-	if t.mainBox != nil {
+	if t.inited {
 		t.mainBox.Destroy()
 	}
-	t.mainBox, _ = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	t.mainBox.SetProperty("border_width", 0)
+	t.inited = true
+	t.mainBox = gtk.NewBox(gtk.OrientationVertical, 0)
+	t.mainBox.SetBorderWidth(0)
 
 	l := len(t.terminals)
 	xlog.Debug("terminals:", l)
 	for _, term := range t.terminals {
 		xlog.Debug("Add terminals ", term.Name)
 		if l > 1 {
-			header, _ := gtk.HeaderBarNew()
+			header := gtk.NewHeaderBar()
 			header.SetTitle(term.Name)
-			theme, _ := gtk.IconThemeGetDefault()
+			theme := gtk.IconThemeGetDefault1()
 			t.addButtons(theme, header, term)
 			t.mainBox.PackStart(header, false, false, 0)
 		}
@@ -82,20 +85,20 @@ func (t *AllTerminal) Layout() gtk.IWidget {
 	return t.mainBox
 }
 
-func (t *AllTerminal) addButtons(theme *gtk.IconTheme, header *gtk.HeaderBar, term *Terminals) {
-	upButton, _ := gtk.ButtonNew()
-	var upImage *gtk.Image
-	var downImage *gtk.Image
+func (t *AllTerminal) addButtons(theme gtk.IconTheme, header gtk.HeaderBar, term *Terminals) {
+	upButton := gtk.NewButton()
+	var upImage gtk.Image
+	var downImage gtk.Image
 	if theme.HasIcon("go-up") {
-		icon, _ := theme.LoadIcon("go-up", int(gtk.ICON_SIZE_BUTTON), gtk.ICON_LOOKUP_USE_BUILTIN)
-		if icon != nil {
-			upImage, _ = gtk.ImageNewFromPixbuf(icon)
+		icon, err := theme.LoadIcon("go-up", int32(gtk.IconSizeButton), gtk.IconLookupFlagsUseBuiltin)
+		if err == nil {
+			upImage = gtk.NewImageFromPixbuf(icon)
 		}
 	}
 	if theme.HasIcon("go-down") {
-		icon, _ := theme.LoadIcon("go-down", int(gtk.ICON_SIZE_BUTTON), gtk.ICON_LOOKUP_USE_BUILTIN)
-		if icon != nil {
-			downImage, _ = gtk.ImageNewFromPixbuf(icon)
+		icon, err := theme.LoadIcon("go-down", int32(gtk.IconSizeButton), gtk.IconLookupFlagsUseBuiltin)
+		if err == nil {
+			downImage = gtk.NewImageFromPixbuf(icon)
 		}
 	}
 	if term.IsHidden() {
@@ -103,7 +106,7 @@ func (t *AllTerminal) addButtons(theme *gtk.IconTheme, header *gtk.HeaderBar, te
 	} else {
 		upButton.Add(upImage)
 	}
-	upButton.Connect("clicked", func(_ *gtk.Button) {
+	upButton.Connect("clicked", func() {
 		xlog.Info("Hide: ", term.IsHidden())
 		if term.IsHidden() {
 			term.Show()
@@ -114,15 +117,15 @@ func (t *AllTerminal) addButtons(theme *gtk.IconTheme, header *gtk.HeaderBar, te
 	})
 	header.PackEnd(upButton)
 
-	closeButton, _ := gtk.ButtonNew()
+	closeButton := gtk.NewButton()
 	if theme.HasIcon("window-close") {
-		icon, _ := theme.LoadIcon("window-close", int(gtk.ICON_SIZE_BUTTON), gtk.ICON_LOOKUP_USE_BUILTIN)
-		if icon != nil {
-			closeImage, _ := gtk.ImageNewFromPixbuf(icon)
+		icon, err := theme.LoadIcon("window-close", int32(gtk.IconSizeButton), gtk.IconLookupFlagsUseBuiltin)
+		if err == nil {
+			closeImage := gtk.NewImageFromPixbuf(icon)
 			closeButton.Add(closeImage)
 		}
 	}
-	closeButton.Connect("clicked", func(_ *gtk.Button) {
+	closeButton.Connect("clicked", func() {
 		t.RemoveGroup(term.Name)
 	})
 	header.PackEnd(closeButton)
@@ -134,7 +137,7 @@ func (t *AllTerminal) PasteClipboard() {
 	}
 }
 
-func (t *AllTerminal) Event(ev *gdk.Event) {
+func (t *AllTerminal) Event(ev gdk.Event) {
 	for _, term := range t.terminals {
 		term.Event(ev)
 	}
@@ -214,15 +217,15 @@ type Terminals struct {
 	terminals []*Terminal
 	mu        sync.Mutex
 
-	layoutTable *gtk.Grid
+	layoutTable gtk.Grid
 
 	isHidden atomic.Bool
-	Cols     float64
-	Rows     float64
+	Cols     int32
+	Rows     int32
 }
 
 type Terminal struct {
-	*gtk.Widget
+	gtk.Widget
 	*vte.Terminal
 
 	Host      string
@@ -231,11 +234,11 @@ type Terminal struct {
 }
 
 type reflowConfig struct {
-	Cols        int
-	Rows        int
-	LayoutTable *gtk.Grid
-	MinWidth    int
-	MinHeight   int
+	Cols        int32
+	Rows        int32
+	LayoutTable gtk.Grid
+	MinWidth    int32
+	MinHeight   int32
 }
 
 func NewTerminals(sshCmd string, sshArgs []string, name string) *Terminals {
@@ -244,7 +247,7 @@ func NewTerminals(sshCmd string, sshArgs []string, name string) *Terminals {
 		sshArgs: sshArgs,
 		Name:    name,
 	}
-	t.layoutTable, _ = gtk.GridNew()
+	t.layoutTable = gtk.NewGrid()
 	t.layoutTable.SetRowHomogeneous(true)
 	t.layoutTable.SetColumnHomogeneous(true)
 	t.layoutTable.SetRowSpacing(1)
@@ -258,16 +261,10 @@ func newTerminal(host string) *Terminal {
 	if t == nil {
 		return nil
 	}
-	obj := &glib.Object{
-		GObject: glib.ToGObject(unsafe.Pointer(t.Native())),
-	}
-	obj.RefSink()
-	runtime.SetFinalizer(obj, (*glib.Object).Unref)
-
 	return &Terminal{
-		Widget: &gtk.Widget{
-			InitiallyUnowned: glib.InitiallyUnowned{
-				Object: obj,
+		Widget: gtk.Widget{
+			InitiallyUnowned: g.InitiallyUnowned{
+				Object: g.WrapObject(unsafe.Pointer(t.Native())),
 			},
 		},
 		Terminal: t,
@@ -275,29 +272,29 @@ func newTerminal(host string) *Terminal {
 	}
 }
 
-func (t *Terminals) Reflow(width int, force bool, c *Config) {
-	numTerms := t.Len()
-	cs, _ := t.layoutTable.GetProperty("column_spacing")
+func (t *Terminals) Reflow(width int32, force bool, c *Config) {
+	numTerms := int32(t.Len())
+	cs, _ := t.layoutTable.Get("column_spacing")
 
-	t.Cols = float64((width - cs.(int)) / c.MinWidth)
+	t.Cols = (width - cs.GetInt()) / c.MinWidth
 	if t.Cols < 1 || numTerms == 1 {
 		t.Cols = 1
-	} else if int(t.Cols) > numTerms {
-		t.Cols = float64(numTerms)
+	} else if t.Cols > numTerms {
+		t.Cols = numTerms
 	}
-	t.Rows = math.Ceil(float64(numTerms) / t.Cols)
+	t.Rows = numTerms / t.Cols
 	if t.Rows < 1 {
 		t.Rows = 1
 	}
 	// ensure we evenly distribute terminals per row.
-	t.Cols = math.Ceil(float64(numTerms) / t.Rows)
+	t.Cols = numTerms / t.Rows
 	xlog.Debugf("Reflow width %s %d => cols: %.0f, rows: %.0f numTerms: %d", t.Name, width, t.Cols, t.Rows, numTerms)
-	nc, _ := t.layoutTable.GetProperty("n_columns")
-	nr, _ := t.layoutTable.GetProperty("n_rows")
-	if nc != t.Rows || nr != t.Rows || force {
+	nc, _ := t.layoutTable.Get("n_columns")
+	nr, _ := t.layoutTable.Get("n_rows")
+	if nc.GetInt() != t.Rows || nr.GetInt() != t.Rows || force {
 		t.ReflowTable(&reflowConfig{
-			Cols:        int(t.Cols),
-			Rows:        int(t.Rows),
+			Cols:        t.Cols,
+			Rows:        t.Rows,
 			LayoutTable: t.layoutTable,
 			MinWidth:    c.MinWidth,
 			MinHeight:   c.MinHeight,
@@ -319,8 +316,8 @@ func (t *Terminals) ReflowTable(rc *reflowConfig) {
 	// layout terminals
 	i := 0
 	l := len(t.terminals)
-	for r := 1; r <= rc.Rows; r++ {
-		for c := 1; c <= rc.Cols; c++ {
+	for r := int32(1); r <= rc.Rows; r++ {
+		for c := int32(1); c <= rc.Cols; c++ {
 			t.terminals[i].SetSizeRequest(rc.MinWidth, rc.MinHeight)
 			t.terminals[i].SetTooltipText(t.terminals[i].Host)
 			rc.LayoutTable.Attach(t.terminals[i], c, r, 1, 1)
@@ -356,13 +353,16 @@ func (t *Terminals) AddHost(host string) {
 	})
 	term.CopyInput = true
 	// attach copy/paste handler
-	term.Connect("key_press_event", func(_ interface{}, ev *gdk.Event) {
-		keyEvent := &gdk.EventKey{Event: ev}
+	term.Connect("key_press_event", func(p gi.ParamBox) {
+		ev := gdk.Event{}
+		ev.P = p.Params[1].(unsafe.Pointer)
 		// check for paste key shortcut (ctl-shift-v/c)
-		if keyEvent.Type() == gdk.EVENT_KEY_PRESS &&
-			keyEvent.State()&uint(gdk.CONTROL_MASK) == uint(gdk.CONTROL_MASK) &&
-			keyEvent.State()&uint(gdk.SHIFT_MASK) == uint(gdk.SHIFT_MASK) {
-			switch keyEvent.KeyVal() {
+		_, mod := ev.GetState()
+		if ev.GetEventType() == gdk.EventTypeKeyPress &&
+			mod&gdk.ModifierTypeControlMask == gdk.ModifierTypeControlMask &&
+			mod&gdk.ModifierTypeShiftMask == gdk.ModifierTypeShiftMask {
+			_, v := ev.GetKeyval()
+			switch v {
 			case gdk.KEY_V:
 				term.PasteClipboard()
 			case gdk.KEY_C:
@@ -391,7 +391,7 @@ func (t *Terminals) RemoveClosedHost() {
 	}
 }
 
-func (t *Terminals) Event(ev *gdk.Event) {
+func (t *Terminals) Event(ev gdk.Event) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	for _, t := range t.terminals {
@@ -467,7 +467,7 @@ func (t *Terminals) OrderDesc() {
 	})
 }
 
-func (t *Terminals) Layout() *gtk.Grid {
+func (t *Terminals) Layout() gtk.Grid {
 	return t.layoutTable
 }
 
