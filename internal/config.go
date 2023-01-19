@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -20,10 +19,10 @@ import (
 )
 
 type Config struct {
-	StartMaximized bool   `config:"startmaximized"`
-	Font           string `config:"font"`
-	MinWidth       int    `config:"minwidth"`
-	MinHeight      int    `config:"minheight"`
+	StartMaximized bool   `config:"startMaximized" json:"startMaximized"`
+	Font           string `config:"font" json:"font"`
+	MinWidth       int    `config:"minWidth" json:"minWidth"`
+	MinHeight      int    `config:"minHeight" json:"minHeight"`
 }
 
 type ConfigStore struct {
@@ -68,7 +67,6 @@ func NewConfig() (*ConfigStore, error) {
 	}
 	err = loader.Load(c)
 
-	fmt.Println(c.Config())
 	return c, err
 }
 

@@ -382,13 +382,16 @@ func (t *Terminals) AddHost(host string) {
 func (t *Terminals) RemoveClosedHost() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	for i, term := range t.terminals {
+	var newTerminals []*Terminal
+	for _, term := range t.terminals {
 		if term.closeAble.Load() {
 			xlog.Info("Disconnected from: " + term.Host)
-			t.terminals = append(t.terminals[:i], t.terminals[i+1:]...)
 			t.layoutTable.Remove(term)
+			continue
 		}
+		newTerminals = append(newTerminals, term)
 	}
+	t.terminals = newTerminals
 }
 
 func (t *Terminals) Event(ev *gdk.Event) {
